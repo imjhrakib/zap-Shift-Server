@@ -79,7 +79,7 @@ async function run() {
               currency: "usd",
               unit_amount: amount,
               product_data: {
-                name: paymentInfo.parcelName,
+                name: `Please pay for: ${paymentInfo.parcelName}`,
               },
             },
             quantity: 1,
@@ -124,6 +124,25 @@ async function run() {
       });
       console.log(session);
       res.send({ url: session.url });
+    });
+
+    //update
+    app.patch("/payment-success", async (req, res) => {
+      const sessionId = req.query.session_id;
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      console.log("session ", session);
+      if (session.payment_status === "paid") {
+        const id = session.metadata.parcelId;
+        const query = { _id: new ObjectId(id) };
+        const update = {
+          $set: {
+            paymentStatus: "paid",
+          },
+        };
+        const result = await parcelCollection.updateOne(query, update);
+        res.send(result);
+      }
+      res.send({ success: true });
     });
 
     // Send a ping to confirm a successful connection
